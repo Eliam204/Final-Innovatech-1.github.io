@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ojo de Calor - Monitor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+        }
+        .container {
+            margin: 50px auto;
+            max-width: 500px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #4CAF50;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 5px;
+            margin-top: 20px;
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #eee;
+            border-radius: 5px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Ojo de Calor</h1>
+        <p>Visualización de datos en tiempo real</p>
+        <button id="connectBtn">Conectar al ESP32</button>
+        <div class="grid" id="grid"></div>
+    </div>
+
+    <script>
+        const connectBtn = document.getElementById('connectBtn');
+        const grid = document.getElementById('grid');
+
+        // Crear las celdas para la visualización
+        for (let i = 0; i < 64; i++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            grid.appendChild(cell);
+        }
+
+        // Conectar al ESP32 vía WebSocket
+        connectBtn.addEventListener('click', () => {
+            const socket = new WebSocket("ws://<IP_DEL_ESP32>/ws");
+
+            socket.onopen = () => {
+                console.log("Conectado al ESP32");
+                connectBtn.textContent = "Conectado";
+                connectBtn.disabled = true;
+            };
+
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                const cells = document.querySelectorAll('.cell');
+                data.forEach((temp, i) => {
+                    cells[i].textContent = temp.toFixed(1);
+                    const intensity = Math.min(255, Math.max(0, (temp - 20) * 10)); // Escala para colores
+                    cells[i].style.backgroundColor = `rgb(${intensity}, 0, ${255 - intensity})`;
+                });
+            };
+
+            socket.onclose = () => {
+                console.log("Desconectado del ESP32");
+                connectBtn.textContent = "Conectar al ESP32";
+                connectBtn.disabled = false;
+            };
+
+            socket.onerror = (error) => {
+                console.error("Error en WebSocket", error);
+            };
+        });
+    </script>
+</body>
+</html>
